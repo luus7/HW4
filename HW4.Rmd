@@ -14,3 +14,63 @@ library(janitor)
 library(pracma)
 ```
 
+```{r}
+warming_data <- read.csv("warming.csv")
+damage <- read.csv("damages.csv")
+
+
+quad_dmg <- lm(damages~0 + warming+I(warming^2), damage)
+
+ggplot(damage, aes(warming, damages)) + geom_point() + geom_jitter(width=.2) + stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1) + ggtitle("Damages ($) Related to Global Mean Temperature Change (Celcius)") +labs(x="Warming (Celcius)", y="Damages ($)") + theme_minimal()
+```
+
+```{r}
+base_warm <- tibble(warming=warming_data$warming_baseline)
+
+predicted_dmg <- data.frame(predict_damage = predict(quad_dmg, newdata=base_warm)) %>%
+                mutate(years=warming_data$year)
+
+ggplot(predicted_dmg, aes(years, predict_damage)) + geom_point()
+
+pulse_warm <- tibble(warming=warming_data$warming_pulse)
+
+predicted_dmg_pulse <- data.frame(predict_damage = predict(quad_dmg, newdata=pulse_warm)) %>%
+                mutate(years=warming_data$year)
+
+ggplot(predicted_dmg_pulse, aes(years,predict_damage)) + geom_point()
+
+
+warming_baseline <- tibble(warming=warming_data$warming_baseline)
+
+predicted_dmg_pulse_base <- data.frame(predict_damage = predict(quad_dmg, newdata=warming_baseline )) %>%
+                mutate(years=warming_data$year)
+
+diff_damage <- cbind.data.frame(year=warming_data$year, predicted_dmg_pulse$predict_damage - predicted_dmg_pulse_base$predict_damage)
+
+ggplot(diff_damage, aes(year, predicted_dmg_pulse$predict_damage - predicted_dmg_pulse_base$predict_damage)) + geom_point() + labs(y="Difference between Baseline and Pulse")
+
+diff_damage_perton <- cbind.data.frame(year=warming_data$year, (predicted_dmg_pulse$predict_damage - predicted_dmg_pulse_base$predict_damage)/(35*10^9))
+
+ggplot(diff_damage_perton, aes(year, (predicted_dmg_pulse$predict_damage - predicted_dmg_pulse_base$predict_damage)/(35*10^9))) + geom_point() + labs(y="Difference between Baseline and Pulse per Ton")
+```
+
+```{r}
+discount_dmg <- function(discount){
+  
+ discounting <-  discount + damage$warming + damage$warming^2
+ return(discounting)
+}
+
+discounts <- cbind.data.frame(".01"=discount_dmg(.01),
+".02"=discount_dmg(.02),
+".03"=discount_dmg(.03),
+".04"=discount_dmg(.04),
+".05"=discount_dmg(.05),
+".06"=discount_dmg(.06),
+".07"=discount_dmg(.07),
+".08"=discount_dmg(.08),
+rates=rep(c(.01:.08), times = 556))
+
+discounts %>% pivot_longer(!names_to = "rates", values_to = "SCC")
+```
+
