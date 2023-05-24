@@ -54,11 +54,13 @@ ggplot(diff_damage_per_ton, aes(year, diff_dmg)) + geom_point() + labs(y="Differ
 ```
 
 ```{r}
+present_dmg <- diff_damage_per_ton %>% filter(year=="2023")
 df_dmgs = data.frame()
 discount <- seq(.01,.08, .01)
 # years <- 2021:2100
 for(i in 1:length(discount)){
 # for(j in 1:length(years)){
+     # future_discounted_dmg <- present_dmg$diff_dmg/discount[i]
      future_discounted_dmg <- diff_damage_per_ton$diff_dmg/discount[i]
  # }
    df_discount <- data.frame("rates" = discount[i], future_discounted_dmg)
@@ -66,10 +68,12 @@ for(i in 1:length(discount)){
 }
  df_dmgs
 
-ggplot(df_dmgs, aes(rates, future_discounted_dmg)) + geom_point() + geom_smooth() + theme_minimal() + ggtitle("Change in Damage Per Ton Carbon Over Discount Rates") + lab(x="Rates", y="Damage per Ton Carbon")
+ggplot(df_dmgs, aes(rates, future_discounted_dmg)) + geom_point() + geom_smooth() + theme_minimal() + ggtitle("Change in Damage Per Ton Carbon Over Discount Rates") + labs(x="Rates", y="Damage per Ton Carbon")
+
+
 ```
 
 ```{r}
-.001+(2*.01)
+present_dmg$diff_dmg/(.001+(2*.01))
 ```
 
