@@ -15,62 +15,64 @@ library(pracma)
 ```
 
 ```{r}
+damage_data <- read.csv("damages.csv")
 warming_data <- read.csv("warming.csv")
-damage <- read.csv("damages.csv")
+quad_dmg <- lm(damages~0 + warming+I(warming^2), damage_data)
 
-
-quad_dmg <- lm(damages~0 + warming+I(warming^2), damage)
-
-ggplot(damage, aes(warming, damages)) + geom_point() + geom_jitter(width=.2) + stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1) + ggtitle("Damages ($) Related to Global Mean Temperature Change (Celcius)") +labs(x="Warming (Celcius)", y="Damages ($)") + theme_minimal()
+ggplot(damage_data, aes(warming, damages)) + geom_point() + geom_jitter(width=.2) + stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1) + ggtitle("Damages ($) Related to Global Mean Temperature Change (Celcius)") +labs(x="Warming (Celcius)", y="Damages ($)") + theme_minimal()
 ```
 
 ```{r}
 base_warm <- tibble(warming=warming_data$warming_baseline)
 
-predicted_dmg <- data.frame(predict_damage = predict(quad_dmg, newdata=base_warm)) %>%
+predicted_baseline_dmg <- data.frame(predict_damage = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_baseline))) %>%
                 mutate(years=warming_data$year)
 
-ggplot(predicted_dmg, aes(years, predict_damage)) + geom_point()
-
-pulse_warm <- tibble(warming=warming_data$warming_pulse)
-
-predicted_dmg_pulse <- data.frame(predict_damage = predict(quad_dmg, newdata=pulse_warm)) %>%
-                mutate(years=warming_data$year)
-
-ggplot(predicted_dmg_pulse, aes(years,predict_damage)) + geom_point()
-
-
-warming_baseline <- tibble(warming=warming_data$warming_baseline)
-
-predicted_dmg_pulse_base <- data.frame(predict_damage = predict(quad_dmg, newdata=warming_baseline )) %>%
-                mutate(years=warming_data$year)
-
-diff_damage <- cbind.data.frame(year=warming_data$year, predicted_dmg_pulse$predict_damage - predicted_dmg_pulse_base$predict_damage)
-
-ggplot(diff_damage, aes(year, predicted_dmg_pulse$predict_damage - predicted_dmg_pulse_base$predict_damage)) + geom_point() + labs(y="Difference between Baseline and Pulse")
-
-diff_damage_perton <- cbind.data.frame(year=warming_data$year, (predicted_dmg_pulse$predict_damage - predicted_dmg_pulse_base$predict_damage)/(35*10^9))
-
-ggplot(diff_damage_perton, aes(year, (predicted_dmg_pulse$predict_damage - predicted_dmg_pulse_base$predict_damage)/(35*10^9))) + geom_point() + labs(y="Difference between Baseline and Pulse per Ton")
+ggplot(predicted_baseline_dmg, aes(years, predict_damage)) + geom_point() + ggtitle("Predicted Damages Overtime Without Pulse")+ labs(x="Years", y="Predicted Damage")+theme_minimal()
 ```
 
 ```{r}
-discount_dmg <- function(discount){
-  
- discounting <-  discount + damage$warming + damage$warming^2
- return(discounting)
+pulse_warm <- tibble(warming=warming_data$warming_pulse)
+predicted_pulse_dmg <- data.frame(predict_damage = predict(quad_dmg, newdata=pulse_warm)) %>%
+                mutate(years=warming_data$year)
+
+ggplot(predicted_pulse_dmg, aes(years,predict_damage)) + geom_point() + ggtitle("Predicted Damages Overtime With Pulse")+ labs(x="Years", y="Predicted Damage")+theme_minimal()
+```
+
+
+```{r}
+diff_damage <- cbind.data.frame(year=warming_data$year, diff=(predicted_pulse_dmg$predict_damage - predicted_baseline_dmg$predict_damage))
+
+ggplot(diff_damage, aes(year, diff)) + geom_point() + labs(y="Difference between Baseline and Pulse", x="Years")+ggtitle("Difference in Damages Over Time that Arise from Pulse") + theme_minimal()
+```
+
+
+```{r}
+diff_damage_per_ton <- cbind.data.frame(year=warming_data$year, diff_dmg=(predicted_pulse_dmg$predict_damage - predicted_baseline_dmg$predict_damage)/(35*10^9))
+
+ggplot(diff_damage_per_ton, aes(year, diff_dmg)) + geom_point() + labs(y="Difference between Baseline and Pulse per Ton", x="Years") + ggtitle("Difference in Damages Over Time that Arise from Pulse per Ton CO2") + theme_minimal()
+```
+
+```{r}
+df_dmgs = data.frame()
+discount <- seq(.01,.08, .01)
+years <- 2021:2100
+for(i in 1:length(discount)){
+for(j in 1:length(years)){
+     future_discounted_dmg <- diff_damage_per_ton$diff_dmg * (1+discount[i])^years[j]
+ }
+   df_discount <- data.frame("rates" = discount[i], future_discounted_dmg)
+   df_dmgs <- rbind(df_dmgs,df_discount)
 }
+ df_dmgs
+ 
+# SCC_discounting <- df_dmgs %>% pivot_longer(tidyselect::everything(), names_to = "rates", values_to = "SCC") %>%
+#   filter(!str_detect(rates, 'rates'))
 
-discounts <- cbind.data.frame(".01"=discount_dmg(.01),
-".02"=discount_dmg(.02),
-".03"=discount_dmg(.03),
-".04"=discount_dmg(.04),
-".05"=discount_dmg(.05),
-".06"=discount_dmg(.06),
-".07"=discount_dmg(.07),
-".08"=discount_dmg(.08),
-rates=rep(c(.01:.08), times = 556))
+ggplot(df_dmgs, aes(rates, future_discounted_dmg)) + geom_point()
+```
 
-discounts %>% pivot_longer(!names_to = "rates", values_to = "SCC")
+```{r}
+.001+(2*.01)
 ```
 
