@@ -70,24 +70,26 @@ The SCC is defined as the present discounted value of the stream of future damag
 ```{r}
 df_dmgs = data.frame()
 discount <- seq(.01,.08, .01)
-# years <- 2021:2100
+years <- 2021:2100
 for(i in 1:length(discount)){
-# for(j in 1:length(years)){
-     future_discounted_dmg <- diff_damage_per_ton$diff_dmg/discount[i]
- # }
+for(j in 1:length(years)){
+     future_discounted_dmg <- sum(diff_damage_per_ton$diff_dmg)/(1+discount[i])^(years-2023)[j]
+ }
    df_discount <- data.frame("rates" = discount[i], future_discounted_dmg)
    df_dmgs <- rbind(df_dmgs,df_discount)
 }
  df_dmgs
 
-ggplot(df_dmgs, aes(rates, future_discounted_dmg)) + geom_point() + geom_smooth() + theme_minimal() + ggtitle("Change in Damage Per Ton Carbon Over Discount Rates") + labs(x="Rates", y="Damage per Ton Carbon")
+ggplot(df_dmgs, aes(rates, future_discounted_dmg)) + geom_point() + geom_smooth() + theme_minimal() + ggtitle("Change in Damage Per Ton Carbon Over Discount Rates") + labs(x="Rates", y="Damage per Ton Carbon") + geom_point(aes(x= .021, y =80), colour = "red")
 
 #wasn't working at first it was just because "labs" was "lab"
 ```
 
 ##Question 4 
 The National Academies of Sciences, Engineering, and Medicine advised the government in a 2017 report to use the Ramsey Rule when discounting within the SCC calculation, a recommendation the EPA considered. Recall the Ramsey Rule: r = ρ + ηg
-Using ρ = 0.001, η = 2, and g = 0.01, what is the SCC? Locate this point on your graph from above
+Using ρ = 0.001, η = 2, and g = 0.01, what is the SCC? Locate this point on your graph from above. 
+
+See red point located on graph above. 
 
 ```{r}
 .001+(2*.01)
@@ -102,12 +104,45 @@ Use these facts:
 *Society is risk neutral
 *Use a discount rate of 2%
 
-What is the expected present value of damages up to 2100 under Policy A? 
+What is the expected present value of damages up to 2100 under Policy A?
+
+```{r}
+
+damage_A_total <- (sum(predicted_baseline_dmg$predict_damage)/(1+.02)^(2100-2023) *.5) +
+ (sum(predicted_baseline_dmg$predict_damage)/(1+.02)^(2100-2023) *.5 * 1.5)
+
+```
+
 
 What is the expected present value of damages up to 2100 under Policy B? 
 
-Suppose undertaking Policy A costs zero and undertaking Policy B costs X. How large could X be for it to still make
-economic sense to pursue Policy B instead of Policy A? 
+```{r}
+warming_data$warming_B <- ifelse(warming_data$year>=2050, 1.29, warming_data$warming_baseline)
+
+damages_B <- data.frame(predict_damage = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_B))) %>% mutate(years=warming_data$year)
+
+
+df_dmgs_B = data.frame()
+
+years_B <- 2023:2100
+for(i in 1:length(years)){
+damage_B_total <- sum(damages_B$predict_damage)/(1+.02)^(years_B[i]-2023)
+df_damage_B <- data.frame(damage_B_total)
+df_dmgs_B <- rbind(df_dmgs_B,df_damage_B)
+}
+df_dmgs_B
+
+sum(df_dmgs_B$damage_B_total)
+
+```
+
+
+Suppose undertaking Policy A costs zero and undertaking Policy B costs X. How large could X be for it to still make economic sense to pursue Policy B instead of Policy A? 
+
+```{r}
+ifelse()
+```
+
 
 Qualitatively, how would your answer change if society were risk averse?
 
