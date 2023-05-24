@@ -56,20 +56,17 @@ ggplot(diff_damage_per_ton, aes(year, diff_dmg)) + geom_point() + labs(y="Differ
 ```{r}
 df_dmgs = data.frame()
 discount <- seq(.01,.08, .01)
-years <- 2021:2100
+# years <- 2021:2100
 for(i in 1:length(discount)){
-for(j in 1:length(years)){
-     future_discounted_dmg <- diff_damage_per_ton$diff_dmg * (1+discount[i])^years[j]
- }
+# for(j in 1:length(years)){
+     future_discounted_dmg <- diff_damage_per_ton$diff_dmg/discount[i]
+ # }
    df_discount <- data.frame("rates" = discount[i], future_discounted_dmg)
    df_dmgs <- rbind(df_dmgs,df_discount)
 }
  df_dmgs
- 
-# SCC_discounting <- df_dmgs %>% pivot_longer(tidyselect::everything(), names_to = "rates", values_to = "SCC") %>%
-#   filter(!str_detect(rates, 'rates'))
 
-ggplot(df_dmgs, aes(rates, future_discounted_dmg)) + geom_point()
+ggplot(df_dmgs, aes(rates, future_discounted_dmg)) + geom_point() + geom_smooth() + theme_minimal() + 
 ```
 
 ```{r}
