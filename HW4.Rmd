@@ -78,7 +78,24 @@ years <- 2021:2100
 
 for(i in 1:length(discount)){
 for(j in 1:length(years)){
-     future_discounted_dmg <- sum(diff_damage_per_ton$diff_dmg)/(1+discount[i])^(years-2023)[j]
+     future_discounted_dmg <- diff_damage_per_ton$diff_dmg/(1+i)^(j-2023)
+ }
+   df_discount <- data.frame("rates" = i, future_discounted_dmg)
+   df_dmgs <- rbind(df_dmgs,df_discount)
+}
+ df_dmgs %>%
+   group_by(rates) %>%
+   summarize(sum(future_discounted_dmg))
+ 
+ 
+present_dmg <- diff_damage_per_ton %>% filter(year=="2023")
+df_dmgs = data.frame()
+discount <- seq(.01,.08, .01)
+years <- 2021:2100
+
+for(i in 1:length(discount)){
+for(j in 1:length(years)){
+     future_discounted_dmg <- sum(diff_damage_per_ton$diff_dmg)/(1+discount[i])^(years[j]-2023)
  }
    df_discount <- data.frame("rates" = discount[i], future_discounted_dmg)
    df_dmgs <- rbind(df_dmgs,df_discount)
