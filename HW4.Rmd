@@ -1,7 +1,9 @@
 ---
 title: "HW4"
-output: html_document
 date: "2023-05-23"
+output: 
+  html_document:
+      code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -14,14 +16,25 @@ library(janitor)
 library(pracma)
 ```
 
+## Question 1
+Using damages.csv, estimate a quadratic damage function relating the dollar value of damages to the change in global mean temperature. Omit an intercept term; damages by construction must equal zero when there is no climate change. Plot your estimated damage function, overlaid with a scatterplot of the underlying data
+
 ```{r}
+#opening the data 
 damage_data <- read.csv("damages.csv")
 warming_data <- read.csv("warming.csv")
+
+#creating our damage function
 quad_dmg <- lm(damages~0 + warming+I(warming^2), damage_data)
 
+#plotting our results over the scatterplot
 ggplot(damage_data, aes(warming, damages)) + geom_point() + geom_jitter(width=.2) + stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1) + ggtitle("Damages ($) Related to Global Mean Temperature Change (Celcius)") +labs(x="Warming (Celcius)", y="Damages ($)") + theme_minimal()
 ```
 
+## Question 2 
+Use warming.csv and your estimated damage function to predict damages in each year underthe baseline climate trajectory and under the pulse scenario. Make four plots: 
+
+*Plot 1* damages over time without the pulse
 ```{r}
 base_warm <- tibble(warming=warming_data$warming_baseline)
 
@@ -31,6 +44,7 @@ predicted_baseline_dmg <- data.frame(predict_damage = predict(quad_dmg, newdata=
 ggplot(predicted_baseline_dmg, aes(years, predict_damage)) + geom_point() + ggtitle("Predicted Damages Overtime Without Pulse")+ labs(x="Years", y="Predicted Damage")+theme_minimal()
 ```
 
+*Plot 2* damages over time with the pulse
 ```{r}
 pulse_warm <- tibble(warming=warming_data$warming_pulse)
 predicted_pulse_dmg <- data.frame(predict_damage = predict(quad_dmg, newdata=pulse_warm)) %>%
@@ -39,41 +53,141 @@ predicted_pulse_dmg <- data.frame(predict_damage = predict(quad_dmg, newdata=pul
 ggplot(predicted_pulse_dmg, aes(years,predict_damage)) + geom_point() + ggtitle("Predicted Damages Overtime With Pulse")+ labs(x="Years", y="Predicted Damage")+theme_minimal()
 ```
 
-
+*Plot 3* the difference in damages over time that arises from the pulse
 ```{r}
 diff_damage <- cbind.data.frame(year=warming_data$year, diff=(predicted_pulse_dmg$predict_damage - predicted_baseline_dmg$predict_damage))
 
 ggplot(diff_damage, aes(year, diff)) + geom_point() + labs(y="Difference between Baseline and Pulse", x="Years")+ggtitle("Difference in Damages Over Time that Arise from Pulse") + theme_minimal()
 ```
 
-
+*Plot 4* the difference in damages over time from the pulse per ton of CO2 (you can assume that each ton of the pulse causes the same amount of damage)
 ```{r}
 diff_damage_per_ton <- cbind.data.frame(year=warming_data$year, diff_dmg=(predicted_pulse_dmg$predict_damage - predicted_baseline_dmg$predict_damage)/(35*10^9))
 
 ggplot(diff_damage_per_ton, aes(year, diff_dmg)) + geom_point() + labs(y="Difference between Baseline and Pulse per Ton", x="Years") + ggtitle("Difference in Damages Over Time that Arise from Pulse per Ton CO2") + theme_minimal()
 ```
 
+## Question 3
+The SCC is defined as the present discounted value of the stream of future damages caused by one additional ton of CO2.1 The Obama Administration used a discount rate of 3% to discount damages. The recent EPA update uses a discount rate that changes over time, but starts at 2%. Calculate and make a plot of the SCC (y-axis) against the discount rate (x-axis) for discount rates ranging from 1% to 8%.
+
 ```{r}
 present_dmg <- diff_damage_per_ton %>% filter(year=="2023")
 df_dmgs = data.frame()
 discount <- seq(.01,.08, .01)
-# years <- 2021:2100
+years <- 2021:2100
+
 for(i in 1:length(discount)){
-# for(j in 1:length(years)){
-     # future_discounted_dmg <- present_dmg$diff_dmg/discount[i]
-     future_discounted_dmg <- diff_damage_per_ton$diff_dmg/discount[i]
- # }
+for(j in 1:length(years)){
+     future_discounted_dmg <- sum(diff_damage_per_ton$diff_dmg)/(1+discount[i])^(years-2023)[j]
+ }
    df_discount <- data.frame("rates" = discount[i], future_discounted_dmg)
    df_dmgs <- rbind(df_dmgs,df_discount)
 }
  df_dmgs
 
-ggplot(df_dmgs, aes(rates, future_discounted_dmg)) + geom_point() + geom_smooth() + theme_minimal() + ggtitle("Change in Damage Per Ton Carbon Over Discount Rates") + labs(x="Rates", y="Damage per Ton Carbon")
-
-
+ggplot(df_dmgs, aes(rates, future_discounted_dmg)) + geom_point() + geom_smooth() + theme_minimal() + ggtitle("Change in Damage Per Ton Carbon Over Discount Rates") + labs(x="Rates", y="Damage per Ton Carbon") + geom_point(aes(x= .021, y =80), colour = "red")
 ```
+
+## Question 4 
+The National Academies of Sciences, Engineering, and Medicine advised the government in a 2017 report to use the Ramsey Rule when discounting within the SCC calculation, a recommendation the EPA considered. Recall the Ramsey Rule: r = ρ + ηg
+Using ρ = 0.001, η = 2, and g = 0.01, what is the SCC? Locate this point on your graph from above. 
+
+See red point located on graph above for SCC at .021. 
 
 ```{r}
-present_dmg$diff_dmg/(.001+(2*.01))
+.001+(2*.01)
 ```
+
+## Question 5
+Now suppose there are two possible climate policies that can be pursued. Policy A is business as usual emissions, without any substantial climate change mitigation. Policy B is to take immediate and strong action on climate change. 
+
+Use these facts:
+*If you undertake Policy A there are two possible outcomes. Either warming will occur as in the “baseline” (i.e. “no-pulse”) dataset above (this happens with probability 0.5) or warming each year will be 1.5 times that in the “baseline” dataset (with probability 0.5).
+*Under Policy B, warming will continue until 2050 as in the “baseline” dataset, and then will stabilize at 1.29 degrees and stay that way forever.
+*Society is risk neutral
+*Use a discount rate of 2%
+
+What is the expected present value of damages up to 2100 under Policy A?
+
+```{r}
+# warming_data$warming_increased <- warming_data$warming_baseline*1.5
+# damages_A <- data.frame(predict_damage_stable = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_increased))) %>% mutate(predicted_baseline_dmg) %>% filter(years %in% (2023:2100))
+# 
+# # damage_A_total <- (sum(predicted_baseline_dmg$predict_damage)/(1+.02)^(2100-2023) *.5) +
+# #  (sum(predicted_baseline_dmg$predict_damage)/(1+.02)^(2100-2023) *.5 * 1.5)
+# 
+# df_dmgs_A = data.frame()
+# 
+# years_A <- 2023:2100
+# for(i in 1:length(years_A)){
+# # damage_A_total <- data.frame(sum(damages_A$predict_damage)/(1+.02)^(years_A[i]-2023)*.5 + sum(damages_A$predict_damage_stable)/(1+.02)^(years_A[i]-2023)*.5)
+# damage_A_base <- damages_A$predict_damage/(1+.02)^(years_A[i]-2023)*.5
+# damage_A_inc  <- damages_A$predict_damage_stable/(1+.02)^(years_A[i]-2023)*.5
+# }
+# 
+# sum(damage_A_base) + sum(damage_A_inc)
+```
+
+
+```{r}
+#applied probability to warming instead of damages since *warming* occurs with some probability
+
+damages_A_baseline <- data.frame(predict_damage_baseline = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_baseline *.5)))
+
+damages_A_increased <- data.frame(predict_damage_increased = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_baseline*1.5*.5)))
+
+damages_A <- mutate(damages_A_baseline, damages_A_increased, year=warming_data$year) %>% 
+  filter(year %in% (2023:2100))
+
+df_dmgs_A = data.frame()
+
+years_A <- 2023:2100
+for(i in 1:length(years_A)){
+# damage_A_total <- data.frame(sum(damages_A$predict_damage)/(1+.02)^(years_A[i]-2023)*.5 + sum(damages_A$predict_damage_stable)/(1+.02)^(years_A[i]-2023)*.5)
+damage_A_base <- damages_A$predict_damage_baseline/(1+.02)^(years_A[i]-2023)
+damage_A_inc  <- damages_A$predict_damage_increased/(1+.02)^(years_A[i]-2023)
+}
+
+total_damages_A <- sum(damage_A_base) + sum(damage_A_inc)
+total_damages_A
+```
+
+
+What is the expected present value of damages up to 2100 under Policy B? 
+
+```{r}
+warming_data$warming_stable <- ifelse(warming_data$year>=2050, 1.29, warming_data$warming_baseline)
+
+damages_B <- data.frame(predict_damage = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_stable))) %>% mutate(years=warming_data$year) %>% filter(years %in% (2023:2100))
+
+df_dmgs_B = data.frame()
+
+years_B <- 2023:2100
+for(i in 1:length(years_B)){
+damage_B_stream <- damages_B$predict_damage/(1+.02)^(years_B[i]-2023)
+# df_damage_B <- data.frame(damage_B_total)
+# df_dmgs_B <- rbind(df_dmgs_B,df_damage_B)
+}
+
+total_damages_B <- sum(damage_B_stream)
+total_damages_B 
+```
+
+
+Suppose undertaking Policy A costs zero and undertaking Policy B costs X. How large could X be for it to still make economic sense to pursue Policy B instead of Policy A? 
+
+```{r}
+# X < Da - Db
+total_damages_A - total_damages_B
+```
+
+
+Qualitatively, how would your answer change if society were risk averse?
+
+
+
+
+
+
+
 
