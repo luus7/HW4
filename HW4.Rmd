@@ -155,7 +155,8 @@ total_damages_A - total_damages_B
 
 
 Qualitatively, how would your answer change if society were risk averse?
-Between the two possible climate policies that could be pursued (A or b), if society was risk averse, the entire community would choose not to pursue Pol
+
+Between the two possible climate policies that could be pursued (A or b), if society was risk averse, the entire community would choose not to pursue Policy A. This is because people who are risk averse avoid options that are uncertain. Option A has uncertainty because there is a 50-50 chance warming will occur as in baseline or warming will occur 1.5times.
 
 
 
