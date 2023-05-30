@@ -71,38 +71,30 @@ ggplot(diff_damage_per_ton, aes(year, diff_dmg)) + geom_point() + labs(y="Differ
 The SCC is defined as the present discounted value of the stream of future damages caused by one additional ton of CO2.1 The Obama Administration used a discount rate of 3% to discount damages. The recent EPA update uses a discount rate that changes over time, but starts at 2%. Calculate and make a plot of the SCC (y-axis) against the discount rate (x-axis) for discount rates ranging from 1% to 8%.
 
 ```{r}
-present_dmg <- diff_damage_per_ton %>% filter(year=="2023")
-df_dmgs = data.frame()
+diff_damage_per_ton <- diff_damage_per_ton %>% 
+ filter(year %in% (2023:2100))
+
 discount <- seq(.01,.08, .01)
-years <- 2021:2100
-
-for(i in 1:length(discount)){
-for(j in 1:length(years)){
-     future_discounted_dmg <- diff_damage_per_ton$diff_dmg/(1+i)^(j-2023)
- }
-   df_discount <- data.frame("rates" = i, future_discounted_dmg)
-   df_dmgs <- rbind(df_dmgs,df_discount)
-}
- df_dmgs %>%
-   group_by(rates) %>%
-   summarize(sum(future_discounted_dmg))
+years <- 2023:2100
  
- 
-present_dmg <- diff_damage_per_ton %>% filter(year=="2023")
-df_dmgs = data.frame()
-discount <- seq(.01,.08, .01)
-years <- 2021:2100
-
-for(i in 1:length(discount)){
-for(j in 1:length(years)){
-     future_discounted_dmg <- sum(diff_damage_per_ton$diff_dmg)/(1+discount[i])^(years[j]-2023)
- }
-   df_discount <- data.frame("rates" = discount[i], future_discounted_dmg)
-   df_dmgs <- rbind(df_dmgs,df_discount)
+ future_damages <- function(rate, data){
+data/(1+rate)^(years-2023)
 }
- df_dmgs
 
-ggplot(df_dmgs, aes(rates, future_discounted_dmg)) + geom_point() + geom_smooth() + theme_minimal() + ggtitle("Change in Damage Per Ton Carbon Over Discount Rates") + labs(x="Rates", y="Damage per Ton Carbon") + geom_point(aes(x= .021, y =80), colour = "red")
+df_dmgs <- data.frame(
+  rates=discount,
+damages=rbind(
+ sum(future_damages(.01, diff_damage_per_ton$diff_dmg)),
+ sum(future_damages(.02, diff_damage_per_ton$diff_dmg)),
+ sum(future_damages(.03, diff_damage_per_ton$diff_dmg)),
+ sum(future_damages(.04, diff_damage_per_ton$diff_dmg)),
+ sum(future_damages(.05, diff_damage_per_ton$diff_dmg)),
+ sum(future_damages(.06, diff_damage_per_ton$diff_dmg)),
+ sum(future_damages(.07, diff_damage_per_ton$diff_dmg)),
+ sum(future_damages(.08, diff_damage_per_ton$diff_dmg)))
+)
+ 
+ggplot(df_dmgs, aes(rates, damages)) + geom_point() + geom_smooth() + theme_minimal() + ggtitle("Change in Damage Per Ton Carbon Over Discount Rates") + labs(x="Rates", y="Damage per Ton Carbon") + geom_point(aes(x= .021, y =152), colour = "red")
 ```
 
 ## Question 4 
@@ -127,45 +119,15 @@ Use these facts:
 What is the expected present value of damages up to 2100 under Policy A?
 
 ```{r}
-# warming_data$warming_increased <- warming_data$warming_baseline*1.5
-# damages_A <- data.frame(predict_damage_stable = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_increased))) %>% mutate(predicted_baseline_dmg) %>% filter(years %in% (2023:2100))
-# 
-# # damage_A_total <- (sum(predicted_baseline_dmg$predict_damage)/(1+.02)^(2100-2023) *.5) +
-# #  (sum(predicted_baseline_dmg$predict_damage)/(1+.02)^(2100-2023) *.5 * 1.5)
-# 
-# df_dmgs_A = data.frame()
-# 
-# years_A <- 2023:2100
-# for(i in 1:length(years_A)){
-# # damage_A_total <- data.frame(sum(damages_A$predict_damage)/(1+.02)^(years_A[i]-2023)*.5 + sum(damages_A$predict_damage_stable)/(1+.02)^(years_A[i]-2023)*.5)
-# damage_A_base <- damages_A$predict_damage/(1+.02)^(years_A[i]-2023)*.5
-# damage_A_inc  <- damages_A$predict_damage_stable/(1+.02)^(years_A[i]-2023)*.5
-# }
-# 
-# sum(damage_A_base) + sum(damage_A_inc)
-```
+damages_A_baseline <- data.frame(predict_damage_baseline = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_baseline)))
+ 
+damages_A_increased <- data.frame(predict_damage_increased = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_baseline*1.5)))
 
+damages_A <- mutate(damages_A_baseline, damages_A_increased, year=warming_data$year) %>% filter(year %in% (2023:2100))
 
-```{r}
-#applied probability to warming instead of damages since *warming* occurs with some probability
+total_damages_A <- sum(future_damages(.02, damages_A$predict_damage_baseline)*.5) +
+sum(future_damages(.02, damages_A$predict_damage_increased)*.5)
 
-damages_A_baseline <- data.frame(predict_damage_baseline = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_baseline *.5)))
-
-damages_A_increased <- data.frame(predict_damage_increased = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_baseline*1.5*.5)))
-
-damages_A <- mutate(damages_A_baseline, damages_A_increased, year=warming_data$year) %>% 
-  filter(year %in% (2023:2100))
-
-df_dmgs_A = data.frame()
-
-years_A <- 2023:2100
-for(i in 1:length(years_A)){
-# damage_A_total <- data.frame(sum(damages_A$predict_damage)/(1+.02)^(years_A[i]-2023)*.5 + sum(damages_A$predict_damage_stable)/(1+.02)^(years_A[i]-2023)*.5)
-damage_A_base <- damages_A$predict_damage_baseline/(1+.02)^(years_A[i]-2023)
-damage_A_inc  <- damages_A$predict_damage_increased/(1+.02)^(years_A[i]-2023)
-}
-
-total_damages_A <- sum(damage_A_base) + sum(damage_A_inc)
 total_damages_A
 ```
 
@@ -177,17 +139,9 @@ warming_data$warming_stable <- ifelse(warming_data$year>=2050, 1.29, warming_dat
 
 damages_B <- data.frame(predict_damage = predict(quad_dmg, newdata=tibble(warming=warming_data$warming_stable))) %>% mutate(years=warming_data$year) %>% filter(years %in% (2023:2100))
 
-df_dmgs_B = data.frame()
 
-years_B <- 2023:2100
-for(i in 1:length(years_B)){
-damage_B_stream <- damages_B$predict_damage/(1+.02)^(years_B[i]-2023)
-# df_damage_B <- data.frame(damage_B_total)
-# df_dmgs_B <- rbind(df_dmgs_B,df_damage_B)
-}
-
-total_damages_B <- sum(damage_B_stream)
-total_damages_B 
+total_damages_B <- sum(future_damages(.02, damages_B$predict_damage))
+total_damages_B
 ```
 
 
