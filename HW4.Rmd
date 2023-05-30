@@ -1,5 +1,6 @@
 ---
 title: "HW4"
+author: Zoe Rennie, Jaden Husser, Stephanie Luu 
 date: "2023-05-23"
 output: 
   html_document:
@@ -154,7 +155,7 @@ total_damages_A - total_damages_B
 
 
 Qualitatively, how would your answer change if society were risk averse?
-
+Between the two possible climate policies that could be pursued (A or b), if society was risk averse, the entire community would choose not to pursue Pol
 
 
 
